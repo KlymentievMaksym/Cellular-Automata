@@ -34,9 +34,11 @@ def GetNeigbour(position: np.ndarray, indexes: np.ndarray, full_shape: tuple):
 #     return neigbours
 
 
-size = 100
-array = np.random.randint(0, 51, size=(size, size))
-array = np.random.randint(0, 51, size=(1280, 1920))
+size = 1000
+every = 1
+stages = 50
+array = np.random.randint(0, stages + 1, size=(size, size))
+array = np.random.randint(0, stages + 1, size=(1280, 1920))
 
 
 def rules(array, x, y):
@@ -65,8 +67,10 @@ save = []
 
 
 def rules_vectorized(arr):
-    return np.where(arr > 0, arr - 1, 50)
-
+    # if np.random.rand() < 0.8:
+    #     return np.where(arr > 0, np.clip(arr - 1, 0, stages), stages)
+    # else:
+    return np.where(arr < stages, np.clip(arr + 1, 0, stages), 0)
 
 # Основний цикл з векторизованими правилами
 for _ in tqdm(
@@ -78,7 +82,8 @@ for _ in tqdm(
         total=iterations
 ):
     array = rules_vectorized(array)
-    save.append(array.copy())
+    if iterations % every == 0:
+        save.append(array.copy())
 # rules_vec = np.vectorize(rules, excluded=[0])
 
 # for iteration in tqdm(
@@ -120,5 +125,5 @@ def update(frame):
 # fig = plt.gcf()
 anim = animation.FuncAnimation(fig=fig, func=update, frames=len(save), interval=100)
 # plt.tight_layout(pad=0, rect=(0, 0, 0, 0))
-anim.save(f"./Images/Hi{time()}.gif", dpi=100, fps=20, savefig_kwargs={"bbox_inches":'tight',"transparent":True, "pad_inches":0})
+anim.save(f"./Images/Hi{time()}.gif", dpi=100, fps=20)  #, savefig_kwargs={"bbox_inches":'tight',"transparent":True, "pad_inches":0}
 # plt.show()
