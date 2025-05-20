@@ -1,101 +1,39 @@
 import numpy as np
 
+from numba import njit
+
 from tqdm import tqdm
 from time import time
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from matplotlib.colors import ListedColormap
 
 from pprint import pprint
 # import copy
-# from Cell import Cell
+import Rules
 
-
-def GetNeigbour(position: np.ndarray, indexes: np.ndarray, full_shape: tuple):
-    neigbours_indexes = np.zeros_like(indexes)
-    for pos_index in range(len(position)):
-        neigbours_indexes[len(position) - 1 - pos_index] = (indexes[len(position) - 1 - pos_index] + position[pos_index]) % full_shape[pos_index]
-    return neigbours_indexes
-
-
-# def GetNeigbour(position: list, array: list, full_shape: list):
-#     indexes = [-1, 0, 1]
-
-#     neigbours = []
-
-#     for nx in indexes:
-#         for ny in indexes:
-#             x = position[0] + nx
-#             y = position[1] + ny
-#             if (x >= 0 and x < full_shape[0]) and (y >= 0 and y < full_shape[1]) and (x != position[0] or y != position[1]):
-#                 neigbours.append(array[x % full_shape[0]][y % full_shape[1]])
-#             # if (x != position[0] or y != position[1]):
-#             #     neigbours.append(array[x % full_shape[0]][y % full_shape[1]])
-#     return neigbours
 
 def GetAllNeigbours(array: np.ndarray):
-    narray = np.pad(array, 1, mode="constant", constant_values=0)
-    narray = array.copy()
-    shifts = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]
-    neighbours = []
-    print(array)
-    for dx, dy in shifts:
-        if dx == -1 and dy == -1:
-            arr = np.concatenate((narray[None, -1, :-1], narray[:-1, :-1]))
-            print(arr)
-            temp = narray[:-1, -1].copy()
-            narray[0, -1], narray[1:, -1] = narray[-1, -1], temp
-            arr = np.column_stack((narray[:, -1], arr))
-            print(arr)
-            # neighbours.append(array)
-        # neighbours.append(narray[1+dx:1+dx+array.shape[0], 1+dy:1+dy+array.shape[1]])
-    # print(array)
-    # pprint(neighbours)
-    # neighbours = np.stack(neighbours, axis=0)
+    neighbours = np.pad(array, pad_width=1, mode="wrap")
+    neighbours = np.lib.stride_tricks.sliding_window_view(neighbours, (3, 3))
     return neighbours
 
 
-size = 4
+size = 800
 every = 1
-stages = 2
+stages = 55
 array = np.random.randint(0, stages, size=(size, size))
+array = np.random.randint(0, stages, size=(1280, 1920))
 neighbours = GetAllNeigbours(array)
 
-print(array.shape)
-print(neighbours.shape)
-# array = np.random.randint(0, stages, size=(1280, 1920))
-
-
-# def rules(array, x, y):
-#     x_00 = array[x][y]
-#     if x_00 > 0:
-#         array[x][y] -= 1
-#     else:
-#         array[x][y] = 50
-
-# def rules(array, x, y):
-#     x_10 = array[x - 2][y-1]
-#     x_11 = array[x - 1][y-1]
-#     x_12 = array[x][y-1]
-#     if x_10 == 1 and x_11 == 1 and x_12 == 1:
-#         array[x - 1][y-1] = 0
-#     elif x_10 == 0 and x_11 == 0 and x_12 == 0:
-#         array[x - 1][y-1] = 0
-#     elif x_10 == 1 and x_11 == 0 and x_12 == 0:
-#         array[x - 1][y-1] = 0
-#     else:
-#         array[x - 1][y-1] = 1
-
-
-iterations = 100
+iterations = 300
+start_from = 30
 save = []
+sav = True
 
-
-# def rules_vectorized(arr):
-#     return np.where(arr > 0, np.clip(arr - 1, 0, stages), stages)
-
-
-for _ in tqdm(
+index_x, index_y = np.meshgrid(np.arange(array.shape[0], step=1), np.arange(array.shape[1], step=1))
+for iteration in tqdm(
         range(iterations),
         desc="Processing",
         unit="step",
@@ -103,22 +41,36 @@ for _ in tqdm(
         colour='cyan',
         total=iterations
 ):
+
+    # Rules.BriansBrain_vec(array, index_x, index_y, neighbours)
+    array = Rules.Rule2_vec(array, stages)
+    # for nx in range(array.shape[0]):
+    #     for ny in range(array.shape[1]):
+            # Rules.Rule110_2d(array, nx, ny)
+            # Rules.BriansBrain(array, nx, ny, neighbours[nx, ny])
+    neighbours = GetAllNeigbours(array)
     # array = rules_vectorized(array)
-    if iterations % every == 0:
+    if iteration % every == 0 and iteration > start_from:
         save.append(array.copy())
 
-# fig = plt.figure(figsize=(19.2, 10.8), dpi=100)
-# ax = plt.axes([0., 0., 1., 1.])
-# ax.set_axis_off()
-# automata = ax.imshow(array, cmap="binary", aspect='auto')
+# if sav:
+fig, ax = plt.subplots(1, figsize=(19.2, 10.8))
+# else:
+# fig, ax = plt.subplots(1, figsize=(6, 6))
+fig.subplots_adjust(0, 0, 1, 1)
+ax.set_axis_off()
+# cmap = ListedColormap(['red', 'purple', 'green'])
+automata = ax.imshow(save[0], cmap="PuRd", aspect='auto')
 
 
-# def update(frame):
-#     # plt.title(f"Iter {frame}")
-#     automata.set_data(save[frame])
-#     return automata
+def update(frame):
+    # plt.title(f"Iter {frame}")
+    automata.set_data(save[frame])
+    return automata
 
 
-# anim = animation.FuncAnimation(fig=fig, func=update, frames=len(save), interval=100)
-# anim.save(f"./Images/Hi{time()}.gif", dpi=100, fps=20)  #, savefig_kwargs={"bbox_inches":'tight',"transparent":True, "pad_inches":0}
-# plt.show()
+anim = animation.FuncAnimation(fig=fig, func=update, frames=len(save), interval=100)
+if sav:
+    anim.save(f"./Images/Hi{time()}.gif", dpi=100, fps=20)  #, savefig_kwargs={"bbox_inches":'tight',"transparent":True, "pad_inches":0}
+else:
+    plt.show()
