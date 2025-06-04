@@ -30,24 +30,30 @@ def GenerateArray(sizes: tuple[int], stages: int) -> np.ndarray:
     return array_cells
 
 
-def ApplyRulesAndSaveHistory(array_cells: np.ndarray, iterations: int, rule_to_apply: callable, every_nth: int = 1, start_animation_from: int = 0, do_save: bool = False, **kwargs) -> tuple:
+def ApplyRulesAndSaveHistory(array_cells: np.ndarray, iterations: int, rule_to_apply: list[callable], every_nth: int = 1, start_animation_from: int = 0, do_save: bool = False, **kwargs) -> tuple:
     array = array_cells.copy()
     neighbours_cells = GetAllNeigbours(array)
     save = []
     # index_x, index_y = np.meshgrid(np.arange(array.shape[0], step=1), np.arange(array.shape[1], step=1))
     for iteration in tqdm(
             range(iterations),
-            desc="Processing",
+            desc="Mutating",
             unit="step",
             bar_format="{l_bar}{bar:40}{r_bar}",
             colour='cyan',
             total=iterations
     ):
-
-        rule_to_apply(array, neighbours_cells, **kwargs)
+        if callable(rule_to_apply):
+            rule_to_apply(array, neighbours_cells, **kwargs)
+        else:
+            for rule in rule_to_apply:
+                if callable(rule):
+                    rule(array, neighbours_cells, **kwargs)
+                else:
+                    print(f"{rule} is not callable")
         neighbours_cells = GetAllNeigbours(array)
 
-        if do_save and iteration > start_animation_from and iteration % every_nth == 0:
+        if do_save and iteration >= start_animation_from and iteration % every_nth == 0:
             save.append(array.copy())
 
     tuple_to_return = [array]
@@ -75,6 +81,7 @@ def Animate(save: np.ndarray, fig, ax, do_save: bool = False, save_path: str = "
 
 
 def Plot(array: np.ndarray, figsize: tuple[float], do_animation: bool = False, *args, **kwargs):
+    print("[?] Started Plotting")
     fig, ax = plt.subplots(1, figsize=figsize)  #(19.2, 10.8)
     fig.subplots_adjust(0, 0, 1, 1)
     ax.set_axis_off()
@@ -84,3 +91,4 @@ def Plot(array: np.ndarray, figsize: tuple[float], do_animation: bool = False, *
         ax.imshow(array, cmap="PuRd", aspect='auto')
 
     plt.show()
+    print("[?] Finished Plotting")
